@@ -54,7 +54,7 @@ app.post('/', async (req, res) => {
             type: "text",
             text: { body: "Bonjour, comment pouvons-nous vous aider ?" }
           },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { Authorization: `Bearer ${verifyToken}` } }
         );
         console.log("✔ Message d’accueil envoyé");
       }
