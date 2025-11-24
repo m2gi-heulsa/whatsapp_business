@@ -27,7 +27,6 @@ app.post('/', async (req, res) => {
   const body = req.body;
   console.log("\n\n📩 Webhook reçu:\n", JSON.stringify(body, null, 2));
 
-  // WhatsApp message parsing
   try {
     const entry = body.entry?.[0];
     const changes = entry?.changes?.[0];
@@ -36,16 +35,15 @@ app.post('/', async (req, res) => {
     if (message) {
       const from = message.from; // numéro du client
       const type = message.type;
-      const hasContext = message.context ? true : false;
 
       console.log("Message reçu de :", from);
       console.log("Type :", type);
-      console.log("A un contexte ?", hasContext);
 
-      // 🎯 SI LE CLIENT INITIE LA CONVERSATION
-      if (!hasContext && type === "text") {
+      // CAS : le client ouvre une nouvelle conversation
+      if (type === "request_welcome") {
+        console.log("✨ L'utilisateur ouvre une nouvelle conversation");
 
-        // 1️⃣ Envoi du message de bienvenue
+        // Envoyer uniquement le message de bienvenue
         await axios.post(
           `https://graph.facebook.com/v20.0/839608629240039/messages`,
           {
@@ -57,6 +55,12 @@ app.post('/', async (req, res) => {
           { headers: { Authorization: `Bearer ${verifyToken}` } }
         );
         console.log("✔ Message d’accueil envoyé");
+      }
+
+      // CAS : Le client envoie un vrai message texte
+      if (type === "text") {
+        console.log("💬 Message texte reçu du client :", message.text?.body);
+        // Ici tu peux gérer les réponses automatiques si besoin
       }
     }
   } catch (err) {
