@@ -1,17 +1,19 @@
-// Import Express.js
+// Import Express.js et Axios
 const express = require('express');
+const axios = require('axios');
 
-// Create an Express app
+// Crée l'application Express
 const app = express();
-
-// Middleware to parse JSON bodies
 app.use(express.json());
 
-// Set port and verify_token
+// Port et verify token
 const port = process.env.PORT || 3000;
-const verifyToken = process.env.VERIFY_TOKEN;         // pour la vérification du webhook
+const verifyToken = process.env.VERIFY_TOKEN;
 
-// Route for GET requests (Webhook verification)
+// Stocker les utilisateurs déjà contactés
+const contactedUsers = new Set();
+
+// Route GET pour vérifier le webhook
 app.get('/', (req, res) => {
   const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = req.query;
 
@@ -23,55 +25,65 @@ app.get('/', (req, res) => {
   }
 });
 
-// Route for POST requests
+// Route POST pour recevoir les messages
 app.post('/', async (req, res) => {
-  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
-  console.log(`\n\nWebhook received ${timestamp}\n`);
-  console.log(JSON.stringify(req.body, null, 2));
+  console.log('\nWebhook received:\n', JSON.stringify(req.body, null, 2));
 
-  // Récupération des infos Meta
-  const entry = req.body.entry?.[0];
-  const changes = entry?.changes?.[0];
-  const message = changes?.value?.messages?.[0];
+  try {
+    const entries = req.body.entry || [];
+    for (const entry of entries) {
+      const changes = entry.changes || [];
+      for (const change of changes) {
+        const messages = change.value.messages || [];
+        for (const message of messages) {
+          const from = message.from;
 
-  // Si l'utilisateur a envoyé un message texte
-  if (message && message.from && message.type === "text") {
+          // Premier message du client
+          if (!contactedUsers.has(from)) {
+            contactedUsers.add(from);
 
-    const userNumber = message.from;  // numéro du client
-    const phoneNumberId = changes.value.metadata.phone_number_id;
+            // Envoi du template "premiere_assistance"
+            await axios.post(
+              `https://graph.facebook.com/v17.0/839608629240039/messages`,
+              {
+                messaging_product: "whatsapp",
+                to: from,
+                type: "template",
+                template: {
+                  name: "premiere_assistance",
+                  language: { code: "fr" },
+                  components: [
+                    {
+                      type: "BODY",
+                      parameters: [
+                        { type: "text", text: "Amandine" }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                headers: {
+                  "Authorization": "`Bearer ${verifyToken}`",
+                  "Content-Type": "application/json"
+                }
+              }
+            );
 
-    console.log("📩 Message reçu de :", userNumber);
-
-    // Envoi du message via la Cloud API
-    try {
-      await fetch(
-        `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${verifyToken}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            to: userNumber,
-            type: "text",
-            text: { body: "Bonjour, comment pouvons-nous vous aider ?" }
-          })
+            console.log(`Template sent to ${from}`);
+          }
         }
-      );
-
-      console.log("✔ Message d'accueil envoyé !");
-    } catch (err) {
-      console.error("❌ Erreur en envoyant le message :", err);
+      }
     }
-  }
 
-  // Réponse webhook OK
-  res.sendStatus(200);
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Error sending template:', error.response?.data || error.message);
+    res.sendStatus(500);
+  }
 });
 
-// Start the server
+// Démarrer le serveur
 app.listen(port, () => {
-  console.log(`\nListening on port ${port}\n`);
+  console.log(`Listening on port ${port}`);
 });
