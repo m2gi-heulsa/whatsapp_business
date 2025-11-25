@@ -44,7 +44,7 @@ app.post('/', async (req, res) => {
 
             // Envoi du template "premiere_assistance"
             await axios.post(
-              `https://graph.facebook.com/v17.0/839608629240039/messages`,
+              `https://graph.facebook.com/v22.0/839608629240039/messages`,
               {
                 messaging_product: "whatsapp",
                 to: from,
