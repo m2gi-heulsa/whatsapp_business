@@ -43,7 +43,13 @@ app.post('/', async (req, res) => {
     return;
   }
 
+  // Message texte classique
+  if (message?.type === "text") {
+  console.log("📩 Message reçu de :", userNumber);
+}
+
   if (value.type === "request_welcome") {
+    console.log("✨ Request welcome reçu de :", userNumber);
   try {
     await fetch(
       `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
