@@ -1,16 +1,17 @@
-// Import Express.js et Axios
+// Import Express.js
 const express = require('express');
-const axios = require('axios');
 
-// Crée l'application Express
+// Create an Express app
 const app = express();
+
+// Middleware to parse JSON bodies
 app.use(express.json());
 
-// Port et verify token
+// Set port and verify_token
 const port = process.env.PORT || 3000;
 const verifyToken = process.env.VERIFY_TOKEN;
 
-// Route GET pour vérifier le webhook
+// Route for GET requests
 app.get('/', (req, res) => {
   const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = req.query;
 
@@ -22,65 +23,15 @@ app.get('/', (req, res) => {
   }
 });
 
-// Route POST pour recevoir les messages
-app.post('/', async (req, res) => {
-  console.log('\nWebhook received:\n', JSON.stringify(req.body, null, 2));
-
-  try {
-    const entries = req.body.entry || [];
-    for (const entry of entries) {
-      const changes = entry.changes || [];
-      for (const change of changes) {
-        const messages = change.value.messages || [];
-        for (const message of messages) {
-          const from = message.from;
-
-          // Vérifie si c'est un nouveau chat (premier message d'une conversation)
-          const isNewConversation = !message.context?.id;
-
-          if (isNewConversation) {
-            // Envoi du template "premiere_assistance"
-            await axios.post(
-              `https://graph.facebook.com/v22.0/839608629240039/messages`,
-              {
-                messaging_product: "whatsapp",
-                to: from,
-                type: "template",
-                template: {
-                  name: "premiere_assistance",
-                  language: { code: "fr" },
-                  components: [
-                    {
-                      type: "BODY",
-                      parameters: [
-                        { type: "text", text: "Amandine" }
-                      ]
-                    }
-                  ]
-                }
-              },
-              {
-                headers: {
-                  "Authorization": `Bearer ${verifyToken}`,
-                  "Content-Type": "application/json"
-                }
-              }
-            );
-
-            console.log(`Template sent to ${from}`);
-          }
-        }
-      }
-    }
-
-    res.sendStatus(200);
-  } catch (error) {
-    console.error('Error sending template:', error.response?.data || error.message);
-    res.sendStatus(500);
-  }
+// Route for POST requests
+app.post('/', (req, res) => {
+  const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  console.log(`\n\nWebhook received ${timestamp}\n`);
+  console.log(JSON.stringify(req.body, null, 2));
+  res.status(200).end();
 });
 
-// Démarrer le serveur
+// Start the server
 app.listen(port, () => {
-  console.log(`Listening on port ${port}`);
+  console.log(`\nListening on port ${port}\n`);
 });
