@@ -34,6 +34,9 @@ app.post('/', async (req, res) => {
   const changes = entry?.changes?.[0];
   const value = changes?.value;
   
+  // Message utilisateur
+  const message = value?.messages?.[0];
+  
   // Numéro du client et du numéro business
   const userNumber = value?.contacts?.[0]?.wa_id || value?.messages?.[0]?.from;
   const phoneNumberId = value?.metadata?.phone_number_id;
