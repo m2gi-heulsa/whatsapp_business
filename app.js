@@ -10,9 +10,6 @@ app.use(express.json());
 const port = process.env.PORT || 3000;
 const verifyToken = process.env.VERIFY_TOKEN;
 
-// Stocker les utilisateurs déjà contactés
-const contactedUsers = new Set();
-
 // Route GET pour vérifier le webhook
 app.get('/', (req, res) => {
   const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = req.query;
@@ -38,10 +35,10 @@ app.post('/', async (req, res) => {
         for (const message of messages) {
           const from = message.from;
 
-          // Premier message du client
-          if (!contactedUsers.has(from)) {
-            contactedUsers.add(from);
+          // Vérifie si c'est un nouveau chat (premier message d'une conversation)
+          const isNewConversation = !message.context?.id;
 
+          if (isNewConversation) {
             // Envoi du template "premiere_assistance"
             await axios.post(
               `https://graph.facebook.com/v22.0/839608629240039/messages`,
