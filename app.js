@@ -64,7 +64,7 @@ app.post('/', async (req, res) => {
               },
               {
                 headers: {
-                  "Authorization": "`Bearer ${verifyToken}`",
+                  "Authorization": `Bearer ${verifyToken}`,
                   "Content-Type": "application/json"
                 }
               }
