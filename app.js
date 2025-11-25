@@ -29,42 +29,43 @@ app.post('/', async (req, res) => {
   console.log(`\n\nWebhook received ${timestamp}\n`);
   console.log(JSON.stringify(req.body, null, 2));
 
-  // Vérification que la notif contient un message utilisateur
+  // Récupération de l'événement principal
   const entry = req.body.entry?.[0];
   const changes = entry?.changes?.[0];
-  const message = changes?.value?.messages?.[0];
-
-  if (message && message.from && message.type === "text") {
-
-    const userNumber = message.from;  // numéro du client
-    const phoneNumberId = changes.value.metadata.phone_number_id;
-
-    console.log("📩 Message reçu de :", userNumber);
-
-    // Envoi du message via la Cloud API
-    try {
-      await fetch(
-        `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${process.env.VERIFY_TOKEN}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            to: userNumber,
-            type: "text",
-            text: { body: "Bonjour, comment pouvons-nous vous aider ?" }
-          })
-        }
-      );
-
-      console.log("✔ Message d'accueil envoyé !");
-    } catch (err) {
-      console.error("❌ Erreur en envoyant le message :", err);
-    }
+  const value = changes?.value;
+  
+  // Numéro du client et du numéro business
+  const userNumber = value?.contacts?.[0]?.wa_id || value?.messages?.[0]?.from;
+  const phoneNumberId = value?.metadata?.phone_number_id;
+  
+  if (!userNumber) {
+    res.sendStatus(200);
+    return;
   }
+
+  if (value.type === "request_welcome") {
+  try {
+    await fetch(
+      `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.VERIFY_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to: userNumber,
+          type: "text",
+          text: { body: "Bonjour ! Bienvenue sur notre service. Comment pouvons-nous vous aider ?" }
+        })
+      }
+    );
+    console.log("✔ Message de bienvenue envoyé !");
+  } catch (err) {
+    console.error("❌ Erreur en envoyant le message de bienvenue :", err);
+  }
+}
 
   res.sendStatus(200);
 });
