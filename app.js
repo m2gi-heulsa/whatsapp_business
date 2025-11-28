@@ -14,7 +14,7 @@ const verifyToken = process.env.VERIFY_TOKEN;
 const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
 const phoneNumberId = process.env.PHONE_NUMBER_ID;
 
-// Store to track first messages with conversation context
+// Store to track conversations
 const conversationTracker = new Map();
 
 // Your welcome template message
@@ -38,6 +38,18 @@ const welcomeTemplate = {
     ]
   }
 };
+
+// Route for GET requests (webhook verification)
+app.get('/', (req, res) => {
+  const { 'hub.mode': mode, 'hub.challenge': challenge, 'hub.verify_token': token } = req.query;
+
+  if (mode === 'subscribe' && token === verifyToken) {
+    console.log('WEBHOOK VERIFIED');
+    res.status(200).send(challenge);
+  } else {
+    res.status(403).end();
+  }
+});
 
 // Function to send WhatsApp message
 async function sendWhatsAppMessage(to, message) {
@@ -66,34 +78,43 @@ async function sendWhatsAppMessage(to, message) {
 }
 
 // Function to check if it's a new conversation
-function isNewConversation(phoneNumber, messageContext) {
+function isNewConversation(phoneNumber, messageContext, conversationId) {
   // Si on n'a jamais vu cet utilisateur
   if (!conversationTracker.has(phoneNumber)) {
     return true;
   }
   
-  // Si pas de contexte de message (pas de réponse à un message précédent)
-  // ET pas de référence à une conversation existante
-  // Cela peut indiquer une nouvelle conversation après suppression
-  if (!messageContext || (!messageContext.from && !messageContext.id)) {
-    console.log(`🔄 No message context for ${phoneNumber} - might be new conversation after deletion`);
+  const existing = conversationTracker.get(phoneNumber);
+  
+  // Si l'ID de conversation a changé (conversation supprimée puis recréée)
+  if (conversationId && existing.conversationId && existing.conversationId !== conversationId) {
+    console.log(`🔄 Conversation ID changed for ${phoneNumber}: ${existing.conversationId} -> ${conversationId}`);
     return true;
+  }
+  
+  // Si pas de contexte de message (nouveau thread)
+  if (!messageContext) {
+    const timeSinceLastMessage = Date.now() - existing.timestamp;
+    // Si plus de 5 minutes sans contexte = probablement nouvelle conversation
+    if (timeSinceLastMessage > 5 * 60 * 1000) {
+      console.log(`🔄 No context after 5+ minutes for ${phoneNumber} - treating as new conversation`);
+      return true;
+    }
   }
   
   return false;
 }
 
-// Function to track conversation with more details
-function trackConversation(phoneNumber, messageContext) {
+// Function to track conversation
+function trackConversation(phoneNumber, conversationId = null) {
   conversationTracker.set(phoneNumber, { 
     timestamp: Date.now(),
     templateSent: true,
-    lastContext: messageContext,
-    messageCount: (conversationTracker.get(phoneNumber)?.messageCount || 0) + 1
+    conversationId: conversationId || 'unknown'
   });
 }
 
-// Route for POST requests (webhook messages) - version améliorée
+// Route for POST requests (webhook messages)
 app.post('/', async (req, res) => {
   const timestamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
   console.log(`\n\nWebhook received ${timestamp}\n`);
@@ -110,29 +131,30 @@ app.post('/', async (req, res) => {
         const message = value.messages[0];
         const from = message.from;
         const messageContext = message.context;
-        const messageType = message.type;
         
-        console.log(`📨 Message from ${from}, type: ${messageType}`);
-        console.log(`📄 Context:`, messageContext ? JSON.stringify(messageContext, null, 2) : 'No context');
+        // Essayer de récupérer un ID de conversation
+        const conversationId = value?.metadata?.phone_number_id || message.id?.substring(0, 10);
         
-        // Check if this is a new conversation
-        if (isNewConversation(from, messageContext)) {
+        console.log(`📨 Message from ${from}`);
+        console.log(`📄 Context:`, messageContext ? 'Present' : 'None');
+        console.log(`🆔 Conversation ID:`, conversationId);
+        
+        // Vérifier si c'est une nouvelle conversation
+        if (isNewConversation(from, messageContext, conversationId)) {
           console.log(`🆕 NEW/RESET conversation detected for ${from} - sending welcome template...`);
           
           try {
             await sendWhatsAppMessage(from, welcomeTemplate);
-            trackConversation(from, messageContext);
+            trackConversation(from, conversationId);
             console.log(`✅ Welcome template sent to ${from}`);
           } catch (error) {
-            console.error(`❌ Failed to send welcome template to ${from}:`, error.message);
+            console.error(`❌ Failed to send welcome template:`, error.message);
           }
         } else {
-          console.log(`📝 Continuing conversation with ${from} - no template sent`);
-          // Update tracking without sending template
+          console.log(`👋 CONTINUING conversation with ${from} - no template sent`);
+          // Mettre à jour le timestamp
           const existing = conversationTracker.get(from);
           if (existing) {
-            existing.messageCount++;
-            existing.lastContext = messageContext;
             existing.timestamp = Date.now();
           }
         }
@@ -153,8 +175,9 @@ app.get('/health', (req, res) => {
     trackedConversations: conversationTracker.size,
     conversations: Array.from(conversationTracker.entries()).map(([phone, data]) => ({
       phone,
-      conversationId: data.conversationId,
-      lastMessageTime: new Date(data.lastMessageTime).toISOString()
+      lastMessageTime: new Date(data.timestamp).toISOString(),
+      templateSent: data.templateSent,
+      conversationId: data.conversationId
     }))
   });
 });
@@ -182,7 +205,8 @@ app.get('/tracked-users', (req, res) => {
   const users = Array.from(conversationTracker.entries()).map(([phone, data]) => ({
     phoneNumber: phone,
     timestamp: new Date(data.timestamp).toISOString(),
-    templateSent: data.templateSent
+    templateSent: data.templateSent,
+    conversationId: data.conversationId
   }));
   
   res.status(200).json({
@@ -191,10 +215,18 @@ app.get('/tracked-users', (req, res) => {
   });
 });
 
+// Route to reset all tracking
+app.post('/reset-tracking', (req, res) => {
+  conversationTracker.clear();
+  console.log('All conversation tracking reset');
+  res.status(200).json({ message: 'All conversation tracking reset successfully' });
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`\n🚀 WhatsApp Webhook listening on port ${port}`);
-  console.log(`📋 Health check available at: http://localhost:${port}/health`);
-  console.log(`🔄 Reset tracking at: POST http://localhost:${port}/reset-tracking`);
-  console.log(`👤 Reset specific user at: POST http://localhost:${port}/reset-user/{phoneNumber}\n`);
+  console.log(`📋 Health check: GET /health`);
+  console.log(`👥 View tracked users: GET /tracked-users`);
+  console.log(`🔄 Reset all tracking: POST /reset-tracking`);
+  console.log(`👤 Reset specific user: POST /reset-user/{phoneNumber}\n`);
 });
