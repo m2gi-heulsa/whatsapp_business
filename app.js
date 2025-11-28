@@ -22,16 +22,22 @@ const welcomeTemplate = {
   type: 'template',
   template: {
     name: 'premiere_assistance',
-    "language": { "code": "fr" },
-    "components": [
-        {
-            "type": "BODY",
-            "parameters": [
-                { "type": "text", "text": "Amandine" },
-            ]
-        }
+    language: { 
+      code: "fr" 
+    },
+    components: [
+      {
+        type: "body",
+        parameters: [
+          { 
+            type: "text", 
+            text: "Amandine" 
+          }
+        ]
+      }
     ]
-}
+  }
+};
 
 // Function to send WhatsApp message
 async function sendWhatsAppMessage(to, message) {
