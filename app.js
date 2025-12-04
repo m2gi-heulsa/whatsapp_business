@@ -109,9 +109,20 @@ app.post('/',async (req, res) => {
   if (needGreeting) {
     await sendWhatsAppMessage(clientId, greetingMessage(name));
     lastGreetingSent[clientId] = now;
+    return; // on ne traite pas encore la sélection de bouton à ce moment
   }
 
-  // Sinon : ne rien faire
+  // Ensuite, si le message reçu est un bouton :
+  if (message.type === "button") {
+  const selectedPayload = message.button.payload;
+
+  if (selectedPayload === "Contacter un commercial") {
+    await sendWhatsAppMessage(clientId, {
+      text: {
+        body: Un commercial va venir vous répondre.`
+      }
+    });
+  }
 });
 
 // Start the server
