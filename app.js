@@ -1,6 +1,9 @@
 // Import Express.js
 const express = require('express');
 
+// Import axios
+const axios = require('axios');
+
 // Create an Express app
 const app = express();
 
