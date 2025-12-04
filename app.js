@@ -114,16 +114,17 @@ app.post('/',async (req, res) => {
 
   // Ensuite, si le message reçu est un bouton :
   if (message.type === "button") {
-  const selectedPayload = message.button.payload;
+    const selectedPayload = message.button.payload;
 
-  if (selectedPayload === "Contacter un commercial") {
-    await sendWhatsAppMessage(clientId, {
-      text: {
-        body: "Un commercial va venir vous répondre."
-      }
-    });
+    if (selectedPayload === "Contacter un commercial") {
+      await sendWhatsAppMessage(clientId, {
+        text: {
+          body: "Un commercial va venir vous répondre."
+        }
+      });
+    }
   }
-};
+});
 
 // Start the server
 app.listen(port, () => {
