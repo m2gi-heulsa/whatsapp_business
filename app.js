@@ -22,7 +22,7 @@ const lastGreetingSent = {};
 // Message/template à envoyer
 const greetingMessage = {
   text: {
-    body : "Bonjour ${name}, que pouvons-nous faire pour vous ?" 
+    body : `Bonjour ${name}, que pouvons-nous faire pour vous ?`
   }
 };
 
