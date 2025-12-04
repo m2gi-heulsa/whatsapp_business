@@ -123,7 +123,7 @@ app.post('/',async (req, res) => {
       }
     });
   }
-});
+};
 
 // Start the server
 app.listen(port, () => {
