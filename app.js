@@ -23,7 +23,7 @@ const lastGreetingSent = {};
 const greetingMessage = (name) => ({
   type: 'template',
     template: {
-      name: 'premiere_assistance',
+      name: 'premiere_assistance2',
       language: { 
         code: "fr" 
       },
