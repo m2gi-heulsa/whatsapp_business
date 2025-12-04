@@ -20,7 +20,7 @@ const phoneNumberId = process.env.PHONE_NUMBER_ID;
 const lastGreetingSent = {};
 
 // Message/template à envoyer
-const greetingMessage = {
+const greetingMessage(name) = {
   text: {
     body : `Bonjour ${name}, que pouvons-nous faire pour vous ?`
   }
@@ -92,7 +92,7 @@ app.post('/',async (req, res) => {
   const needGreeting = now - lastTime > twentyFourHours;
 
   if (needGreeting) {
-    await sendWhatsAppMessage(clientId, greetingMessage);
+    await sendWhatsAppMessage(clientId, greetingMessage(name));
     lastGreetingSent[clientId] = now;
   }
 
