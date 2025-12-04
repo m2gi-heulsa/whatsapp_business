@@ -20,11 +20,11 @@ const phoneNumberId = process.env.PHONE_NUMBER_ID;
 const lastGreetingSent = {};
 
 // Message/template à envoyer
-const greetingMessage = (name) => {
+const greetingMessage = (name) => ({
   text: {
-    body : `Bonjour ${name}, que pouvons-nous faire pour vous ?`
+    body: `Bonjour ${name}, que pouvons-nous faire pour vous ?`
   }
-};
+});
 
 // Fonction utilitaire : envoyer un message WhatsApp
 async function sendWhatsAppMessage(to, playload) {
