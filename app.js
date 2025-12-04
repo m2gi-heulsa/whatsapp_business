@@ -22,7 +22,7 @@ const lastGreetingSent = {};
 // Message/template à envoyer
 const greetingMessage = {
   text: {
-    body : "Bonjour, que pouvons-nous faire pour vous ?" 
+    body : "Bonjour ${name}, que pouvons-nous faire pour vous ?" 
   }
 };
 
@@ -78,6 +78,9 @@ app.post('/',async (req, res) => {
   }
 
   const clientId = message.from; // numéro du client
+
+  // Récupération du nom whatsapp du client
+  const name = changes.value.contacts?.[0]?.profile?.name || "👋";
 
   // Vérifier la dernière fois qu'on lui a envoyé le message d'accueil
   const now = Date.now();
