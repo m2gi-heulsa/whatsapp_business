@@ -119,7 +119,7 @@ app.post('/',async (req, res) => {
   if (selectedPayload === "Contacter un commercial") {
     await sendWhatsAppMessage(clientId, {
       text: {
-        body: Un commercial va venir vous répondre.`
+        body: "Un commercial va venir vous répondre."
       }
     });
   }
