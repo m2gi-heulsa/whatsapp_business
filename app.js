@@ -21,10 +21,25 @@ const lastGreetingSent = {};
 
 // Message/template à envoyer
 const greetingMessage = (name) => ({
-  text: {
-    body: `Bonjour ${name}, que pouvons-nous faire pour vous ?`
-  }
-});
+  type: 'template',
+    template: {
+      name: 'premiere_assistance2',
+      language: { 
+        code: "fr" 
+      },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { 
+              type: "text", 
+              text: name
+            }
+          ]
+        }
+      ]
+    }
+  });
 
 // Fonction utilitaire : envoyer un message WhatsApp
 async function sendWhatsAppMessage(to, playload) {
