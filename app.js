@@ -7,8 +7,14 @@ const axios = require('axios');
 // Create an Express app
 const app = express();
 
+// Import CORS
+const cors = require('cors');
+
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+// Activate cors
+app.use(cors());
 
 // Set port and verify_token
 const port = process.env.PORT || 3000;
