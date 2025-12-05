@@ -274,6 +274,28 @@ app.post('/mark-as-read', (req, res) => {
   }
 });
 
+// AJOUTER cette route pour supprimer une conversation
+app.post('/delete-conversation', (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    
+    if (!phoneNumber) {
+      return res.status(400).json({ error: 'phoneNumber requis' });
+    }
+
+    const conversations = loadConversations();
+    const filtered = conversations.filter(c => c.PhoneNumber !== phoneNumber);
+    
+    saveConversations(filtered);
+    
+    console.log(`🗑️ Conversation supprimée: ${phoneNumber}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Erreur suppression conversation:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`\nListening on port ${port}\n`);
